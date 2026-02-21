@@ -16,9 +16,11 @@ struct BottleLevelView: View {
                     RoundedRectangle(cornerRadius: height / 2)
                         .fill(color.opacity(0.2))
 
-                    RoundedRectangle(cornerRadius: height / 2)
-                        .fill(color)
-                        .frame(width: max(geo.size.width * level, height))
+                    if level > 0 {
+                        RoundedRectangle(cornerRadius: height / 2)
+                            .fill(color)
+                            .frame(width: max(geo.size.width * level, height))
+                    }
                 }
             }
             .frame(height: height)

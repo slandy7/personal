@@ -126,14 +126,15 @@ struct CocktailListView: View {
                 } else {
                     List {
                         ForEach(filteredMatches) { match in
-                            CocktailRowView(
-                                match: match,
-                                isFavorite: favorites.isFavorite(match.cocktail.id)
-                            )
-                            .contentShape(Rectangle())
-                            .onTapGesture {
+                            Button {
                                 selectedCocktail = match.cocktail
+                            } label: {
+                                CocktailRowView(
+                                    match: match,
+                                    isFavorite: favorites.isFavorite(match.cocktail.id)
+                                )
                             }
+                            .buttonStyle(.plain)
                             .swipeActions(edge: .leading) {
                                 Button {
                                     favorites.toggle(match.cocktail.id)
@@ -285,6 +286,7 @@ private struct DifficultyPill: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -299,7 +301,7 @@ private struct GlassPill: View {
                 Image(systemName: glass?.icon ?? "list.bullet")
                     .font(.caption)
                 Text(glass?.rawValue ?? "Any")
-                    .font(.system(size: 9))
+                    .font(.caption2)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity)
@@ -309,6 +311,7 @@ private struct GlassPill: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -339,7 +342,7 @@ struct CocktailRowView: View {
 
                     if match.cocktail.ibaOfficial {
                         Text("IBA")
-                            .font(.system(size: 8, weight: .bold))
+                            .font(.system(.caption2, weight: .bold))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
                             .background(Color.secondary.opacity(0.2))
@@ -405,6 +408,7 @@ private struct CategoryChip: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

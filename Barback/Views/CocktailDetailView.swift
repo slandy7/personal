@@ -7,6 +7,7 @@ struct CocktailDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query private var logs: [CocktailLog]
+    @Query private var shoppingItems: [ShoppingItem]
 
     @State private var scale: Double = 1.0
     @State private var showMadeItSheet = false
@@ -157,7 +158,7 @@ struct CocktailDetailView: View {
                 .padding(.horizontal)
 
             HStack(spacing: 8) {
-                ForEach([0.5, 1.0, 2.0, 3.0], id: \.self) { value in
+                ForEach([0.5, 1.0, 2.0, 4.0, 8.0], id: \.self) { value in
                     Button {
                         withAnimation(.easeInOut(duration: 0.15)) { scale = value }
                     } label: {
@@ -172,6 +173,7 @@ struct CocktailDetailView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(value == 0.5 ? "Half serving" : "\(Int(value)) serving\(value > 1 ? "s" : "")")
+                    .accessibilityAddTraits(scale == value ? .isSelected : [])
                 }
             }
             .padding(.horizontal)
@@ -187,7 +189,7 @@ struct CocktailDetailView: View {
                 .padding(.horizontal)
 
             VStack(spacing: 0) {
-                ForEach(Array(displayIngredients.enumerated()), id: \.element.name) { index, ingredient in
+                ForEach(Array(displayIngredients.enumerated()), id: \.offset) { index, ingredient in
                     let originalIngredient = cocktail.ingredients[index]
                     let isMissing = match.missingIngredients.contains(originalIngredient.name)
                     let isAvailable = match.availableIngredients.contains(originalIngredient.name)
@@ -407,7 +409,9 @@ struct CocktailDetailView: View {
     // MARK: - Actions
 
     private func addMissingToShoppingList() {
+        let existingNames = Set(shoppingItems.filter { !$0.isCompleted }.map { $0.name })
         for ingredientName in match.missingIngredients {
+            guard !existingNames.contains(ingredientName) else { continue }
             let category = IngredientData.category(for: ingredientName)
             let item = ShoppingItem(name: ingredientName, category: category)
             modelContext.insert(item)
@@ -440,11 +444,20 @@ private struct MadeItSheet: View {
                                     .foregroundStyle(star <= rating ? .yellow : .secondary)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("\(star) star\(star > 1 ? "s" : "")")
                         }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 4)
+                    .accessibilityElement()
+                    .accessibilityLabel("Rating")
+                    .accessibilityValue("\(rating) of 5 stars")
+                    .accessibilityAdjustableAction { direction in
+                        switch direction {
+                        case .increment: rating = min(5, rating + 1)
+                        case .decrement: rating = max(0, rating - 1)
+                        @unknown default: break
+                        }
+                    }
                 }
 
                 Section("Notes") {
@@ -456,8 +469,8 @@ private struct MadeItSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Skip") {
-                        logIt()
+                    Button("Cancel") {
+                        dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {

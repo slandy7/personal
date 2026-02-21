@@ -7,17 +7,22 @@ struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showingAddBottle = false
     @State private var selectedCocktail: Cocktail?
+    @State private var pendingStarterBar: StarterBars.Template?
 
     private var inventory: Set<String> {
         Set(bottles.filter { $0.level > 0 }.map { $0.ingredientName })
     }
 
+    private var allMatches: [CocktailMatch] {
+        MatchEngine.sortedMatches(inventory: inventory)
+    }
+
     private var canMakeMatches: [CocktailMatch] {
-        MatchEngine.canMake(inventory: inventory)
+        allMatches.filter { $0.canMake }
     }
 
     private var almostMatches: [CocktailMatch] {
-        MatchEngine.almostCanMake(inventory: inventory)
+        allMatches.filter { $0.missingCount == 1 }
     }
 
     private var uniqueCategories: Int {
@@ -226,7 +231,7 @@ struct HomeView: View {
 
                             ForEach(StarterBars.all) { template in
                                 StarterBarCard(template: template) {
-                                    loadStarterBar(template)
+                                    pendingStarterBar = template
                                 }
                                 .padding(.horizontal)
                             }
@@ -246,6 +251,23 @@ struct HomeView: View {
                     CocktailDetailView(cocktail: cocktail, inventory: inventory)
                 }
             }
+            .confirmationDialog(
+                "Load \(pendingStarterBar?.name ?? "")?",
+                isPresented: Binding(
+                    get: { pendingStarterBar != nil },
+                    set: { if !$0 { pendingStarterBar = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Load \(pendingStarterBar?.items.count ?? 0) Bottles") {
+                    if let template = pendingStarterBar {
+                        loadStarterBar(template)
+                    }
+                    pendingStarterBar = nil
+                }
+            } message: {
+                Text("This will add \(pendingStarterBar?.items.count ?? 0) bottles to your bar.")
+            }
         }
     }
 
@@ -254,7 +276,6 @@ struct HomeView: View {
         if !canMakeMatches.isEmpty {
             return canMakeMatches[day % canMakeMatches.count]
         }
-        let allMatches = MatchEngine.sortedMatches(inventory: inventory)
         if !allMatches.isEmpty {
             return allMatches[day % min(5, allMatches.count)]
         }
@@ -263,7 +284,9 @@ struct HomeView: View {
     }
 
     private func loadStarterBar(_ template: StarterBars.Template) {
+        let existingIngredients = Set(bottles.map { $0.ingredientName })
         for item in template.items {
+            guard !existingIngredients.contains(item.ingredientName) else { continue }
             let bottle = Bottle(
                 name: item.name,
                 ingredientName: item.ingredientName,

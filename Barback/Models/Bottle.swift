@@ -21,11 +21,11 @@ final class Bottle {
 
     var levelDescription: String {
         switch level {
-        case 0.75...1.0: return "Full"
-        case 0.5..<0.75: return "Three-quarters"
-        case 0.25..<0.5: return "Half"
-        case 0.01..<0.25: return "Low"
-        case 0: return "Empty"
+        case 0.875...1.0: return "Full"
+        case 0.625..<0.875: return "Three-quarters"
+        case 0.375..<0.625: return "Half"
+        case 0.01..<0.375: return "Low"
+        case ...0: return "Empty"
         default: return "Full"
         }
     }
@@ -64,12 +64,12 @@ final class Bottle {
         self.name = name
         self.ingredientName = ingredientName
         self.categoryRaw = category.rawValue
-        self.level = level
+        self.level = min(max(level, 0), 1)
         self.notes = notes
         self.dateAdded = Date()
         self.isFavorite = isFavorite
         self.volumeML = volumeML
-        self.abv = abv
+        self.abv = min(max(abv, 0), 100)
         self.purchaseDate = purchaseDate
     }
 }

@@ -178,7 +178,11 @@ struct BottleDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done") {
+                        bottle.abv = min(max(bottle.abv, 0), 100)
+                        dismiss()
+                    }
+                    .disabled(bottle.name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
             .confirmationDialog(

@@ -55,8 +55,8 @@ enum MatchEngine {
         "Honey Syrup": ["Agave Syrup", "Simple Syrup"],
         "Agave Syrup": ["Honey Syrup", "Simple Syrup"],
 
-        // Soda
-        "Club Soda": ["Tonic Water"],
+        // Vermouth family (bidirectional for Lillet)
+        "Dry Vermouth": ["Lillet Blanc"],
     ]
 
     /// Returns possible substitutes the user already owns.

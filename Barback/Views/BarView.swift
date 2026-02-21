@@ -8,6 +8,7 @@ struct BarView: View {
     @State private var searchText = ""
     @State private var selectedCategory: BottleCategory?
     @State private var selectedBottle: Bottle?
+    @State private var bottleToDelete: Bottle?
     @State private var sortOrder: SortOrder = .name
 
     enum SortOrder: String, CaseIterable {
@@ -108,16 +109,15 @@ struct BarView: View {
                         ForEach(groupedBottles, id: \.0) { category, items in
                             Section {
                                 ForEach(items) { bottle in
-                                    BottleRowView(bottle: bottle)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            selectedBottle = bottle
-                                        }
-                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button {
+                                        selectedBottle = bottle
+                                    } label: {
+                                        BottleRowView(bottle: bottle)
+                                    }
+                                    .buttonStyle(.plain)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                             Button(role: .destructive) {
-                                                withAnimation {
-                                                    modelContext.delete(bottle)
-                                                }
+                                                bottleToDelete = bottle
                                             } label: {
                                                 Label("Delete", systemImage: "trash")
                                             }
@@ -172,6 +172,23 @@ struct BarView: View {
             }
             .sheet(item: $selectedBottle) { bottle in
                 BottleDetailSheet(bottle: bottle)
+            }
+            .confirmationDialog(
+                "Delete \(bottleToDelete?.name ?? "")?",
+                isPresented: Binding(
+                    get: { bottleToDelete != nil },
+                    set: { if !$0 { bottleToDelete = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let bottle = bottleToDelete {
+                        withAnimation { modelContext.delete(bottle) }
+                    }
+                    bottleToDelete = nil
+                }
+            } message: {
+                Text("This action cannot be undone.")
             }
         }
     }
@@ -248,6 +265,7 @@ private struct FilterChip: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

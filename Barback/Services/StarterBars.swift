@@ -20,7 +20,7 @@ enum StarterBars {
     static let essentials = Template(
         id: "essentials",
         name: "The Essentials",
-        subtitle: "10 core items to make 20+ classics",
+        subtitle: "11 core items to make 20+ classics",
         icon: "star.fill",
         items: [
             StarterBarItem(name: "Vodka", ingredientName: "Vodka", category: .spirit),

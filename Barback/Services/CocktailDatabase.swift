@@ -175,7 +175,7 @@ enum CocktailDatabase {
             ingredients: [
                 CocktailIngredient("Bourbon", "0.75 oz"),
                 CocktailIngredient("Aperol", "0.75 oz"),
-                CocktailIngredient("Amaretto", "0.75 oz"),
+                CocktailIngredient("Amaro Nonino", "0.75 oz"),
                 CocktailIngredient("Lemon Juice", "0.75 oz"),
             ],
             instructions: [
@@ -704,7 +704,7 @@ enum CocktailDatabase {
             ],
             glass: .rocks,
             garnish: "Orange slice",
-            category: .gin,
+            category: .other,
             difficulty: .easy,
             description: "A 'mistaken' Negroni — prosecco instead of gin. Lighter, bubbly, and utterly addictive.",
             ibaOfficial: false
@@ -1264,7 +1264,7 @@ enum CocktailDatabase {
             ],
             glass: .martini,
             garnish: "Lemon peel",
-            category: .vodka,
+            category: .gin,
             difficulty: .easy,
             description: "James Bond's personal recipe from Casino Royale. 'I never have more than one drink before dinner. But I do like that one to be large and very strong.'",
             ibaOfficial: true

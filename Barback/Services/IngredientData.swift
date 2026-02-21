@@ -44,6 +44,7 @@ enum IngredientData {
         .liqueur: [
             "Allspice Dram",
             "Amaretto",
+            "Amaro Nonino",
             "Aperol",
             "Bénédictine",
             "Campari",
@@ -119,6 +120,7 @@ enum IngredientData {
         ],
         .bitter: [
             "Angostura Bitters",
+            "Aromatic Bitters",
             "Chocolate Bitters",
             "Orange Bitters",
             "Peychaud's Bitters",
@@ -144,8 +146,9 @@ enum IngredientData {
     // MARK: - Lookup
 
     static func category(for ingredientName: String) -> BottleCategory {
+        let lowered = ingredientName.lowercased()
         for (category, names) in byCategory {
-            if names.contains(ingredientName) {
+            if names.contains(where: { $0.lowercased() == lowered }) {
                 return category
             }
         }
