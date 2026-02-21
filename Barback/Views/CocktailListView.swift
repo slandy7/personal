@@ -6,7 +6,10 @@ struct CocktailListView: View {
     @State private var searchText = ""
     @State private var filterMode: FilterMode = .all
     @State private var selectedCategory: CocktailCategory?
+    @State private var selectedDifficulty: CocktailDifficulty?
+    @State private var selectedGlass: GlassType?
     @State private var selectedCocktail: Cocktail?
+    @State private var showFilterSheet = false
 
     private let favorites = FavoritesManager.shared
 
@@ -27,7 +30,6 @@ struct CocktailListView: View {
     private var filteredMatches: [CocktailMatch] {
         var matches = allMatches
 
-        // Search filter
         if !searchText.isEmpty {
             let query = searchText.lowercased()
             matches = matches.filter { match in
@@ -37,7 +39,6 @@ struct CocktailListView: View {
             }
         }
 
-        // Mode filter
         switch filterMode {
         case .all:
             break
@@ -47,9 +48,16 @@ struct CocktailListView: View {
             matches = matches.filter { favorites.isFavorite($0.cocktail.id) }
         }
 
-        // Category filter
         if let category = selectedCategory {
             matches = matches.filter { $0.cocktail.category == category }
+        }
+
+        if let difficulty = selectedDifficulty {
+            matches = matches.filter { $0.cocktail.difficulty == difficulty }
+        }
+
+        if let glass = selectedGlass {
+            matches = matches.filter { $0.cocktail.glass == glass }
         }
 
         return matches
@@ -59,12 +67,17 @@ struct CocktailListView: View {
         allMatches.filter { $0.canMake }.count
     }
 
+    private var activeFilterCount: Int {
+        (selectedCategory != nil ? 1 : 0) +
+        (selectedDifficulty != nil ? 1 : 0) +
+        (selectedGlass != nil ? 1 : 0)
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // MARK: - Filter Bar
                 VStack(spacing: 12) {
-                    // Mode picker
                     Picker("Filter", selection: $filterMode) {
                         ForEach(FilterMode.allCases, id: \.self) { mode in
                             switch mode {
@@ -80,7 +93,6 @@ struct CocktailListView: View {
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
 
-                    // Category scroll
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             CategoryChip(
@@ -140,10 +152,28 @@ struct CocktailListView: View {
             }
             .navigationTitle("Cocktails")
             .searchable(text: $searchText, prompt: "Search cocktails or ingredients...")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showFilterSheet = true
+                    } label: {
+                        Image(systemName: activeFilterCount > 0
+                              ? "line.3.horizontal.decrease.circle.fill"
+                              : "line.3.horizontal.decrease.circle")
+                    }
+                }
+            }
             .sheet(item: $selectedCocktail) { cocktail in
                 NavigationStack {
                     CocktailDetailView(cocktail: cocktail, inventory: inventory)
                 }
+            }
+            .sheet(isPresented: $showFilterSheet) {
+                FilterSheet(
+                    selectedDifficulty: $selectedDifficulty,
+                    selectedGlass: $selectedGlass
+                )
+                .presentationDetents([.medium])
             }
         }
     }
@@ -177,6 +207,111 @@ struct CocktailListView: View {
     }
 }
 
+// MARK: - Filter Sheet
+
+private struct FilterSheet: View {
+    @Binding var selectedDifficulty: CocktailDifficulty?
+    @Binding var selectedGlass: GlassType?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Difficulty") {
+                    HStack(spacing: 8) {
+                        DifficultyPill(label: "Any", isSelected: selectedDifficulty == nil) {
+                            selectedDifficulty = nil
+                        }
+                        ForEach([CocktailDifficulty.easy, .medium, .advanced], id: \.self) { diff in
+                            DifficultyPill(label: diff.rawValue, isSelected: selectedDifficulty == diff) {
+                                selectedDifficulty = selectedDifficulty == diff ? nil : diff
+                            }
+                        }
+                    }
+                }
+
+                Section("Glass Type") {
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                    ], spacing: 8) {
+                        GlassPill(glass: nil, isSelected: selectedGlass == nil) {
+                            selectedGlass = nil
+                        }
+                        ForEach(GlassType.allCases) { glass in
+                            GlassPill(glass: glass, isSelected: selectedGlass == glass) {
+                                selectedGlass = selectedGlass == glass ? nil : glass
+                            }
+                        }
+                    }
+                }
+
+                if selectedDifficulty != nil || selectedGlass != nil {
+                    Section {
+                        Button("Clear All Filters") {
+                            selectedDifficulty = nil
+                            selectedGlass = nil
+                        }
+                        .foregroundStyle(.red)
+                    }
+                }
+            }
+            .navigationTitle("Filters")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+private struct DifficultyPill: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.caption)
+                .fontWeight(.medium)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(isSelected ? AppTheme.amber.opacity(0.2) : Color.secondary.opacity(0.1))
+                .foregroundStyle(isSelected ? AppTheme.amber : .secondary)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct GlassPill: View {
+    let glass: GlassType?
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: glass?.icon ?? "list.bullet")
+                    .font(.caption)
+                Text(glass?.rawValue ?? "Any")
+                    .font(.system(size: 9))
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(isSelected ? AppTheme.amber.opacity(0.2) : Color.secondary.opacity(0.1))
+            .foregroundStyle(isSelected ? AppTheme.amber : .secondary)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Cocktail Row
 
 struct CocktailRowView: View {
@@ -185,7 +320,6 @@ struct CocktailRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Glass icon
             Image(systemName: match.cocktail.glass.icon)
                 .font(.title3)
                 .foregroundStyle(match.cocktail.category.color)
@@ -221,7 +355,6 @@ struct CocktailRowView: View {
 
             Spacer()
 
-            // Status badge
             if match.canMake {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
@@ -237,6 +370,8 @@ struct CocktailRowView: View {
             }
         }
         .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(match.cocktail.name), \(match.canMake ? "ready to make" : "missing \(match.missingCount) ingredients")")
     }
 }
 
@@ -275,5 +410,5 @@ private struct CategoryChip: View {
 
 #Preview {
     CocktailListView()
-        .modelContainer(for: [Bottle.self, ShoppingItem.self], inMemory: true)
+        .modelContainer(for: [Bottle.self, ShoppingItem.self, CocktailLog.self], inMemory: true)
 }

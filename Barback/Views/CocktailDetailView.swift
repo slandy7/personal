@@ -6,6 +6,11 @@ struct CocktailDetailView: View {
     let inventory: Set<String>
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query private var logs: [CocktailLog]
+
+    @State private var scale: Double = 1.0
+    @State private var showMadeItSheet = false
+    @State private var addedToShoppingList = false
 
     private let favorites = FavoritesManager.shared
 
@@ -17,30 +22,48 @@ struct CocktailDetailView: View {
         favorites.isFavorite(cocktail.id)
     }
 
+    private var displayIngredients: [CocktailIngredient] {
+        cocktail.scaledIngredients(by: scale)
+    }
+
+    private var timesMade: Int {
+        logs.filter { $0.cocktailId == cocktail.id }.count
+    }
+
+    private var lastMade: Date? {
+        logs.filter { $0.cocktailId == cocktail.id }
+            .sorted { $0.dateMade > $1.dateMade }
+            .first?.dateMade
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // MARK: - Header
                 headerSection
 
                 Divider().padding(.horizontal)
 
-                // MARK: - Ingredients
+                scalePicker
+
+                Divider().padding(.horizontal)
+
                 ingredientsSection
 
                 Divider().padding(.horizontal)
 
-                // MARK: - Instructions
                 instructionsSection
 
-                // MARK: - Add Missing to Shopping
                 if !match.missingIngredients.isEmpty {
                     Divider().padding(.horizontal)
                     addToShoppingSection
                 }
 
-                // MARK: - About
                 Divider().padding(.horizontal)
+
+                madeItSection
+
+                Divider().padding(.horizontal)
+
                 aboutSection
 
                 Spacer(minLength: 32)
@@ -52,14 +75,20 @@ struct CocktailDetailView: View {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Close") { dismiss() }
             }
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                ShareLink(item: cocktail.shareText) {
+                    Image(systemName: "square.and.arrow.up")
+                }
                 Button {
-                    favorites.toggle(cocktail.id)
+                    withAnimation { favorites.toggle(cocktail.id) }
                 } label: {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
                         .foregroundStyle(isFavorite ? .pink : .secondary)
                 }
             }
+        }
+        .sheet(isPresented: $showMadeItSheet) {
+            MadeItSheet(cocktailId: cocktail.id)
         }
     }
 
@@ -67,12 +96,10 @@ struct CocktailDetailView: View {
 
     private var headerSection: some View {
         VStack(spacing: 16) {
-            // Glass icon and status
             ZStack {
                 Circle()
                     .fill(cocktail.category.color.opacity(0.12))
                     .frame(width: 80, height: 80)
-
                 Image(systemName: cocktail.glass.icon)
                     .font(.system(size: 32))
                     .foregroundStyle(cocktail.category.color)
@@ -94,7 +121,6 @@ struct CocktailDetailView: View {
                 .foregroundStyle(.secondary)
             }
 
-            // Can make badge
             if match.canMake {
                 Label("You can make this!", systemImage: "checkmark.circle.fill")
                     .font(.subheadline)
@@ -122,6 +148,36 @@ struct CocktailDetailView: View {
         .padding(.top)
     }
 
+    // MARK: - Scale Picker
+
+    private var scalePicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Servings")
+                .font(.headline)
+                .padding(.horizontal)
+
+            HStack(spacing: 8) {
+                ForEach([0.5, 1.0, 2.0, 3.0], id: \.self) { value in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) { scale = value }
+                    } label: {
+                        Text(value == 0.5 ? "½×" : "\(Int(value))×")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(scale == value ? cocktail.category.color.opacity(0.2) : Color.secondary.opacity(0.08))
+                            .foregroundStyle(scale == value ? cocktail.category.color : .secondary)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(value == 0.5 ? "Half serving" : "\(Int(value)) serving\(value > 1 ? "s" : "")")
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+
     // MARK: - Ingredients
 
     private var ingredientsSection: some View {
@@ -131,52 +187,71 @@ struct CocktailDetailView: View {
                 .padding(.horizontal)
 
             VStack(spacing: 0) {
-                ForEach(Array(cocktail.ingredients.enumerated()), id: \.element.id) { index, ingredient in
-                    let isMissing = match.missingIngredients.contains(ingredient.name)
-                    let isAvailable = match.availableIngredients.contains(ingredient.name)
+                ForEach(Array(displayIngredients.enumerated()), id: \.element.name) { index, ingredient in
+                    let originalIngredient = cocktail.ingredients[index]
+                    let isMissing = match.missingIngredients.contains(originalIngredient.name)
+                    let isAvailable = match.availableIngredients.contains(originalIngredient.name)
+                    let substitutes = MatchEngine.allSubstitutes(for: originalIngredient.name)
 
-                    HStack(spacing: 12) {
-                        // Status icon
-                        if isAvailable {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                        } else if ingredient.isOptional {
-                            Image(systemName: "circle.dashed")
-                                .font(.caption)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 12) {
+                            if isAvailable {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                            } else if originalIngredient.isOptional {
+                                Image(systemName: "circle.dashed")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+
+                            Text(ingredient.amount)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
                                 .foregroundStyle(.secondary)
-                        } else {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.caption)
-                                .foregroundStyle(.red)
+                                .frame(width: 70, alignment: .trailing)
+
+                            Text(originalIngredient.name)
+                                .font(.subheadline)
+                                .foregroundStyle(isMissing ? .red : .primary)
+
+                            if originalIngredient.isOptional {
+                                Text("optional")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.secondary.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
+
+                            Spacer()
                         }
 
-                        Text(ingredient.amount)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 70, alignment: .trailing)
-
-                        Text(ingredient.name)
-                            .font(.subheadline)
-                            .foregroundStyle(isMissing ? .red : .primary)
-
-                        if ingredient.isOptional {
-                            Text("optional")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.secondary.opacity(0.1))
-                                .clipShape(Capsule())
+                        // Substitution hints
+                        if isMissing && !substitutes.isEmpty {
+                            let owned = MatchEngine.availableSubstitutes(for: originalIngredient.name, inventory: inventory)
+                            if !owned.isEmpty {
+                                Text("You have: \(owned.joined(separator: ", "))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.green)
+                                    .padding(.leading, 100)
+                            } else {
+                                Text("Sub: \(substitutes.prefix(3).joined(separator: ", "))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.leading, 100)
+                            }
                         }
-
-                        Spacer()
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 10)
 
-                    if index < cocktail.ingredients.count - 1 {
+                    if index < displayIngredients.count - 1 {
                         Divider().padding(.leading, 52)
                     }
                 }
@@ -212,7 +287,6 @@ struct CocktailDetailView: View {
             }
             .padding(.horizontal)
 
-            // Garnish
             if !cocktail.garnish.isEmpty && cocktail.garnish != "None" {
                 HStack(spacing: 12) {
                     Image(systemName: "leaf.fill")
@@ -253,13 +327,64 @@ struct CocktailDetailView: View {
 
             Button {
                 addMissingToShoppingList()
+                withAnimation { addedToShoppingList = true }
             } label: {
-                Label("Add All to Shopping List", systemImage: "cart.fill.badge.plus")
+                Label(
+                    addedToShoppingList ? "Added to Shopping List" : "Add All to Shopping List",
+                    systemImage: addedToShoppingList ? "checkmark" : "cart.fill.badge.plus"
+                )
+                .frame(maxWidth: .infinity)
+                .fontWeight(.semibold)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(addedToShoppingList ? .green : .orange)
+            .disabled(addedToShoppingList)
+            .padding(.horizontal)
+        }
+    }
+
+    // MARK: - Made It
+
+    private var madeItSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Your History")
+                .font(.headline)
+                .padding(.horizontal)
+
+            HStack(spacing: 16) {
+                VStack {
+                    Text("\(timesMade)")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Text("Times made")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+
+                if let date = lastMade {
+                    VStack {
+                        Text(date, format: .dateTime.month(.abbreviated).day())
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                        Text("Last made")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.horizontal)
+
+            Button {
+                showMadeItSheet = true
+            } label: {
+                Label("I Made This!", systemImage: "checkmark.seal.fill")
                     .frame(maxWidth: .infinity)
                     .fontWeight(.semibold)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.orange)
+            .tint(cocktail.category.color)
             .padding(.horizontal)
         }
     }
@@ -290,6 +415,73 @@ struct CocktailDetailView: View {
     }
 }
 
+// MARK: - Made It Sheet
+
+private struct MadeItSheet: View {
+    let cocktailId: String
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @State private var rating: Int = 0
+    @State private var notes: String = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("How was it?") {
+                    HStack(spacing: 8) {
+                        ForEach(1...5, id: \.self) { star in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    rating = rating == star ? 0 : star
+                                }
+                            } label: {
+                                Image(systemName: star <= rating ? "star.fill" : "star")
+                                    .font(.title2)
+                                    .foregroundStyle(star <= rating ? .yellow : .secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("\(star) star\(star > 1 ? "s" : "")")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                }
+
+                Section("Notes") {
+                    TextField("Tasting notes, adjustments...", text: $notes, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+            }
+            .navigationTitle("Log It")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Skip") {
+                        logIt()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        logIt()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private func logIt() {
+        let log = CocktailLog(
+            cocktailId: cocktailId,
+            rating: rating,
+            notes: notes.trimmingCharacters(in: .whitespaces)
+        )
+        modelContext.insert(log)
+        dismiss()
+    }
+}
+
 #Preview {
     NavigationStack {
         CocktailDetailView(
@@ -297,5 +489,5 @@ struct CocktailDetailView: View {
             inventory: ["Bourbon", "Simple Syrup"]
         )
     }
-    .modelContainer(for: [Bottle.self, ShoppingItem.self], inMemory: true)
+    .modelContainer(for: [Bottle.self, ShoppingItem.self, CocktailLog.self], inMemory: true)
 }

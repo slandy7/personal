@@ -40,7 +40,7 @@ struct BarView: View {
         case .dateAdded:
             result.sort { $0.dateAdded > $1.dateAdded }
         case .level:
-            result.sort { $0.level < $1.level }
+            result.sort { $0.level > $1.level }
         }
 
         return result
@@ -218,6 +218,8 @@ struct BottleRowView: View {
                 .frame(width: 34, alignment: .trailing)
         }
         .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(bottle.name), \(bottle.ingredientName), \(Int(bottle.level * 100)) percent full")
     }
 }
 

@@ -44,12 +44,32 @@ enum MatchEngine {
         // Vermouth near-substitutes
         "Lillet Blanc": ["Dry Vermouth"],
 
-        // Elderflower
+        // Elderflower (bidirectional)
         "Elderflower Liqueur": ["St-Germain"],
+        "St-Germain": ["Elderflower Liqueur"],
+
+        // Bitters family
+        "Angostura Bitters": ["Aromatic Bitters"],
+
+        // Honey / agave interchangeable in many sours
+        "Honey Syrup": ["Agave Syrup", "Simple Syrup"],
+        "Agave Syrup": ["Honey Syrup", "Simple Syrup"],
 
         // Soda
         "Club Soda": ["Tonic Water"],
     ]
+
+    /// Returns possible substitutes the user already owns.
+    static func availableSubstitutes(for ingredient: String, inventory: Set<String>) -> [String] {
+        guard let subs = substitutions[ingredient] else { return [] }
+        return subs.filter { inventory.contains($0) }.sorted()
+    }
+
+    /// Returns all known substitutes for a given ingredient.
+    static func allSubstitutes(for ingredient: String) -> [String] {
+        guard let subs = substitutions[ingredient] else { return [] }
+        return subs.sorted()
+    }
 
     // MARK: - Match a Single Cocktail
 

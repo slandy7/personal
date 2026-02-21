@@ -24,6 +24,8 @@ struct StatCard: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
         .cardStyle()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title): \(value)")
     }
 }
 
@@ -84,6 +86,9 @@ struct LargeFeatureCard: View {
             .cardStyle()
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(cocktail.name), \(canMake ? "ready to make" : ""), \(cocktail.glass.rawValue)")
+        .accessibilityHint("Double tap to view recipe")
     }
 }
 

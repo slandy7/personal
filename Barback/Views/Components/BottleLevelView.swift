@@ -29,6 +29,9 @@ struct BottleLevelView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Bottle level \(Int(level * 100)) percent")
+        .accessibilityValue("\(Int(level * 100))%")
     }
 }
 

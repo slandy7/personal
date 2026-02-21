@@ -3,10 +3,10 @@ import SwiftData
 
 struct HomeView: View {
     @Query(sort: \Bottle.name) private var bottles: [Bottle]
+    @Query private var logs: [CocktailLog]
     @Environment(\.modelContext) private var modelContext
     @State private var showingAddBottle = false
     @State private var selectedCocktail: Cocktail?
-    @State private var navigationPath = NavigationPath()
 
     private var inventory: Set<String> {
         Set(bottles.filter { $0.level > 0 }.map { $0.ingredientName })
@@ -18,6 +18,14 @@ struct HomeView: View {
 
     private var almostMatches: [CocktailMatch] {
         MatchEngine.almostCanMake(inventory: inventory)
+    }
+
+    private var uniqueCategories: Int {
+        Set(bottles.map { $0.category }).count
+    }
+
+    private var totalCocktailsMade: Int {
+        logs.count
     }
 
     private var greeting: String {
@@ -41,7 +49,7 @@ struct HomeView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     // MARK: - Greeting
@@ -77,6 +85,31 @@ struct HomeView: View {
                         )
                     }
                     .padding(.horizontal)
+
+                    // MARK: - Bar Stats (when user has bottles)
+                    if !bottles.isEmpty {
+                        HStack(spacing: 12) {
+                            StatCard(
+                                title: "Categories",
+                                value: "\(uniqueCategories)",
+                                icon: "square.grid.2x2.fill",
+                                color: .purple
+                            )
+                            StatCard(
+                                title: "Made",
+                                value: "\(totalCocktailsMade)",
+                                icon: "checkmark.seal.fill",
+                                color: .pink
+                            )
+                            StatCard(
+                                title: "One Away",
+                                value: "\(almostMatches.count)",
+                                icon: "hand.point.up.fill",
+                                color: .orange
+                            )
+                        }
+                        .padding(.horizontal)
+                    }
 
                     // MARK: - Tonight's Pick
                     if let pick = tonightsPick {
@@ -146,11 +179,13 @@ struct HomeView: View {
                                         .frame(width: 60)
                                 }
                                 .padding(.horizontal)
+                                .accessibilityElement(children: .combine)
+                                .accessibilityLabel("\(bottle.name), \(bottle.ingredientName), \(Int(bottle.level * 100)) percent remaining")
                             }
                         }
                     }
 
-                    // MARK: - Empty State
+                    // MARK: - Empty State with Starter Bars
                     if bottles.isEmpty {
                         VStack(spacing: 16) {
                             Image(systemName: "wineglass")
@@ -161,7 +196,7 @@ struct HomeView: View {
                                 .font(.title3)
                                 .fontWeight(.semibold)
 
-                            Text("Start by adding the bottles in your home bar. We'll tell you what cocktails you can make.")
+                            Text("Start by adding the bottles in your home bar, or pick a starter template.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
@@ -177,6 +212,25 @@ struct HomeView: View {
                         }
                         .padding(32)
                         .frame(maxWidth: .infinity)
+
+                        // Starter Bar Templates
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Quick Start")
+                                .font(.headline)
+                                .padding(.horizontal)
+
+                            Text("Load a pre-built bar to get started instantly.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal)
+
+                            ForEach(StarterBars.all) { template in
+                                StarterBarCard(template: template) {
+                                    loadStarterBar(template)
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
                     }
 
                     Spacer(minLength: 32)
@@ -196,7 +250,6 @@ struct HomeView: View {
     }
 
     private var tonightsPick: CocktailMatch? {
-        // Deterministic "random" based on the day
         let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
         if !canMakeMatches.isEmpty {
             return canMakeMatches[day % canMakeMatches.count]
@@ -207,6 +260,17 @@ struct HomeView: View {
         }
         let idx = day % CocktailDatabase.all.count
         return MatchEngine.match(cocktail: CocktailDatabase.all[idx], inventory: inventory)
+    }
+
+    private func loadStarterBar(_ template: StarterBars.Template) {
+        for item in template.items {
+            let bottle = Bottle(
+                name: item.name,
+                ingredientName: item.ingredientName,
+                category: item.category
+            )
+            modelContext.insert(bottle)
+        }
     }
 }
 
@@ -241,10 +305,53 @@ private struct OneAwayCard: View {
             .cardStyle()
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(match.cocktail.name), need \(match.missingIngredients.first ?? "1 ingredient")")
+        .accessibilityHint("Double tap to view recipe")
+    }
+}
+
+// MARK: - Starter Bar Card
+
+private struct StarterBarCard: View {
+    let template: StarterBars.Template
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: template.icon)
+                    .font(.title2)
+                    .foregroundStyle(AppTheme.amber)
+                    .frame(width: 40)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(template.name)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                    Text(template.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(AppTheme.amber.opacity(0.6))
+            }
+            .padding(14)
+            .cardStyle()
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(template.name), \(template.subtitle)")
+        .accessibilityHint("Double tap to load this starter bar")
     }
 }
 
 #Preview {
     HomeView()
-        .modelContainer(for: [Bottle.self, ShoppingItem.self], inMemory: true)
+        .modelContainer(for: [Bottle.self, ShoppingItem.self, CocktailLog.self], inMemory: true)
 }

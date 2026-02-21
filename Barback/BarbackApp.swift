@@ -7,6 +7,6 @@ struct BarbackApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [Bottle.self, ShoppingItem.self])
+        .modelContainer(for: [Bottle.self, ShoppingItem.self, CocktailLog.self])
     }
 }

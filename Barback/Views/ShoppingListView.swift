@@ -7,6 +7,7 @@ struct ShoppingListView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var newItemName = ""
     @State private var showSuggestions = false
+    @State private var showClearConfirmation = false
 
     private var inventory: Set<String> {
         Set(bottles.filter { $0.level > 0 }.map { $0.ingredientName })
@@ -20,12 +21,23 @@ struct ShoppingListView: View {
         items.filter { $0.isCompleted }
     }
 
+    private var pendingGrouped: [(BottleCategory, [ShoppingItem])] {
+        let grouped = Dictionary(grouping: pendingItems) { $0.category }
+        return BottleCategory.allCases.compactMap { category in
+            guard let group = grouped[category], !group.isEmpty else { return nil }
+            return (category, group)
+        }
+    }
+
+    private var totalPendingCount: Int {
+        pendingItems.reduce(0) { $0 + $1.quantity }
+    }
+
     /// Ingredients that would unlock the most new cocktails.
     private var smartSuggestions: [(ingredient: String, unlocksCount: Int)] {
         let allMatches = MatchEngine.matchAll(inventory: inventory)
         let almostMakeable = allMatches.filter { $0.missingCount == 1 }
 
-        // Count how many cocktails each missing ingredient would unlock
         var unlockCounts: [String: Int] = [:]
         for match in almostMakeable {
             for missing in match.missingIngredients {
@@ -33,7 +45,6 @@ struct ShoppingListView: View {
             }
         }
 
-        // Already in shopping list
         let alreadyShopping = Set(items.map { $0.name })
 
         return unlockCounts
@@ -96,6 +107,9 @@ struct ShoppingListView: View {
                                                 .foregroundStyle(AppTheme.amber)
                                         }
                                     }
+                                    .accessibilityElement(children: .combine)
+                                    .accessibilityLabel("\(suggestion.ingredient), unlocks \(suggestion.unlocksCount) cocktails")
+                                    .accessibilityHint("Double tap to add to shopping list")
                                 }
                             } header: {
                                 HStack {
@@ -120,27 +134,59 @@ struct ShoppingListView: View {
                             }
                         }
 
-                        // MARK: - Pending Items
+                        // MARK: - Pending Items (grouped by category)
                         if !pendingItems.isEmpty {
-                            Section {
-                                ForEach(pendingItems) { item in
-                                    ShoppingItemRow(item: item) {
-                                        withAnimation {
-                                            item.isCompleted = true
+                            ForEach(pendingGrouped, id: \.0) { category, groupItems in
+                                Section {
+                                    ForEach(groupItems) { item in
+                                        ShoppingItemRow(item: item) {
+                                            withAnimation {
+                                                item.isCompleted = true
+                                            }
+                                        }
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            Button(role: .destructive) {
+                                                withAnimation {
+                                                    modelContext.delete(item)
+                                                }
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
                                         }
                                     }
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            withAnimation {
-                                                modelContext.delete(item)
-                                            }
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
+                                } header: {
+                                    HStack {
+                                        Label(category.rawValue, systemImage: category.icon)
+                                            .foregroundStyle(category.color)
+                                        Spacer()
+                                        Text("\(groupItems.count)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
-                            } header: {
-                                Text("To Buy (\(pendingItems.count))")
+                            }
+
+                            // Summary
+                            Section {
+                                HStack {
+                                    Text("\(pendingItems.count) item\(pendingItems.count == 1 ? "" : "s")")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                    if totalPendingCount != pendingItems.count {
+                                        Text("(\(totalPendingCount) total)")
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                    Spacer()
+                                    Button {
+                                        completeAll()
+                                    } label: {
+                                        Text("Check All")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                    }
+                                    .tint(AppTheme.amber)
+                                }
                             }
                         }
 
@@ -184,15 +230,34 @@ struct ShoppingListView: View {
                 if !items.isEmpty {
                     ToolbarItem(placement: .primaryAction) {
                         Menu {
-                            Button(role: .destructive) {
-                                clearCompleted()
-                            } label: {
-                                Label("Clear Completed", systemImage: "checkmark.circle")
+                            if !pendingItems.isEmpty {
+                                Button {
+                                    completeAll()
+                                } label: {
+                                    Label("Check All", systemImage: "checkmark.circle.fill")
+                                }
                             }
-                            .disabled(completedItems.isEmpty)
+
+                            if !completedItems.isEmpty {
+                                Button {
+                                    uncheckAll()
+                                } label: {
+                                    Label("Uncheck All", systemImage: "circle")
+                                }
+                            }
+
+                            Divider()
+
+                            if !completedItems.isEmpty {
+                                Button(role: .destructive) {
+                                    clearCompleted()
+                                } label: {
+                                    Label("Clear Completed", systemImage: "checkmark.circle")
+                                }
+                            }
 
                             Button(role: .destructive) {
-                                clearAll()
+                                showClearConfirmation = true
                             } label: {
                                 Label("Clear All", systemImage: "trash")
                             }
@@ -201,6 +266,13 @@ struct ShoppingListView: View {
                         }
                     }
                 }
+            }
+            .confirmationDialog("Clear entire shopping list?", isPresented: $showClearConfirmation, titleVisibility: .visible) {
+                Button("Clear All", role: .destructive) {
+                    clearAll()
+                }
+            } message: {
+                Text("This will remove all \(items.count) items.")
             }
             .onAppear {
                 showSuggestions = pendingItems.isEmpty
@@ -226,6 +298,22 @@ struct ShoppingListView: View {
         modelContext.insert(item)
     }
 
+    private func completeAll() {
+        withAnimation {
+            for item in pendingItems {
+                item.isCompleted = true
+            }
+        }
+    }
+
+    private func uncheckAll() {
+        withAnimation {
+            for item in completedItems {
+                item.isCompleted = false
+            }
+        }
+    }
+
     private func clearCompleted() {
         withAnimation {
             for item in completedItems {
@@ -246,7 +334,7 @@ struct ShoppingListView: View {
 // MARK: - Shopping Item Row
 
 private struct ShoppingItemRow: View {
-    let item: ShoppingItem
+    @Bindable var item: ShoppingItem
     let toggleAction: () -> Void
 
     var body: some View {
@@ -273,17 +361,44 @@ private struct ShoppingItemRow: View {
 
             Spacer()
 
-            if !item.notes.isEmpty {
-                Image(systemName: "note.text")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            if !item.isCompleted {
+                HStack(spacing: 4) {
+                    if item.quantity > 1 {
+                        Button {
+                            item.quantity = max(1, item.quantity - 1)
+                        } label: {
+                            Image(systemName: "minus.circle")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Text("×\(item.quantity)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(item.quantity > 1 ? AppTheme.amber : .secondary)
+                        .frame(minWidth: 24)
+
+                    Button {
+                        item.quantity += 1
+                    } label: {
+                        Image(systemName: "plus.circle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
         .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(item.name), quantity \(item.quantity), \(item.isCompleted ? "completed" : "pending")")
+        .accessibilityHint("Double tap to \(item.isCompleted ? "uncheck" : "check off")")
     }
 }
 
 #Preview {
     ShoppingListView()
-        .modelContainer(for: [Bottle.self, ShoppingItem.self], inMemory: true)
+        .modelContainer(for: [Bottle.self, ShoppingItem.self, CocktailLog.self], inMemory: true)
 }

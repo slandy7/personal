@@ -58,6 +58,7 @@ enum IngredientData {
             "Cynar",
             "Drambuie",
             "Elderflower Liqueur",
+            "St-Germain",
             "Falernum",
             "Fernet-Branca",
             "Galliano",

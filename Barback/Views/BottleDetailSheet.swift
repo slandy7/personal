@@ -8,6 +8,8 @@ struct BottleDetailSheet: View {
     @State private var showDeleteConfirmation = false
     @State private var showIngredientPicker = false
 
+    private let commonVolumes = [50, 200, 350, 375, 500, 700, 750, 1000, 1750]
+
     var body: some View {
         NavigationStack {
             Form {
@@ -30,6 +32,8 @@ struct BottleDetailSheet: View {
                         Spacer()
                     }
                     .listRowBackground(Color.clear)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Bottle level: \(bottle.levelDescription), \(Int(bottle.level * 100)) percent")
                 }
 
                 // MARK: - Info
@@ -62,6 +66,48 @@ struct BottleDetailSheet: View {
                         }
                     }
                     .pickerStyle(.menu)
+                }
+
+                // MARK: - Volume & ABV
+                Section("Details") {
+                    HStack {
+                        Text("Volume")
+                        Spacer()
+                        Menu {
+                            ForEach(commonVolumes, id: \.self) { vol in
+                                Button {
+                                    bottle.volumeML = vol
+                                } label: {
+                                    HStack {
+                                        Text(volumeDisplayString(for: vol))
+                                        if vol == bottle.volumeML {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            Text(bottle.volumeDisplayString)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    HStack {
+                        Text("ABV")
+                        Spacer()
+                        TextField("0", value: $bottle.abv, format: .number)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 60)
+                        Text("%")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let purchaseDate = bottle.purchaseDate {
+                        LabeledContent("Purchased") {
+                            Text(purchaseDate, format: .dateTime.month().day().year())
+                        }
+                    }
                 }
 
                 // MARK: - Level Control
@@ -100,10 +146,11 @@ struct BottleDetailSheet: View {
                 }
 
                 // MARK: - Metadata
-                Section("Details") {
+                Section("Info") {
                     LabeledContent("Added") {
                         Text(bottle.dateAdded, format: .dateTime.month().day().year())
                     }
+
                     LabeledContent("Favorite") {
                         Button {
                             bottle.isFavorite.toggle()
@@ -157,6 +204,16 @@ struct BottleDetailSheet: View {
             }
         }
     }
+
+    private func volumeDisplayString(for ml: Int) -> String {
+        if ml >= 1000 {
+            let liters = Double(ml) / 1000.0
+            return liters.truncatingRemainder(dividingBy: 1) == 0
+                ? "\(Int(liters))L"
+                : String(format: "%.1fL", liters)
+        }
+        return "\(ml)ml"
+    }
 }
 
 // MARK: - Quick Level Button
@@ -186,11 +243,13 @@ private struct QuickLevelButton: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(label) level")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
 #Preview {
-    let bottle = Bottle(name: "Maker's Mark", ingredientName: "Bourbon", category: .spirit, level: 0.65)
+    let bottle = Bottle(name: "Maker's Mark", ingredientName: "Bourbon", category: .spirit, level: 0.65, volumeML: 750, abv: 45)
     BottleDetailSheet(bottle: bottle)
         .modelContainer(for: [Bottle.self, ShoppingItem.self], inMemory: true)
 }

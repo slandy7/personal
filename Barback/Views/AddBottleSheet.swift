@@ -4,18 +4,39 @@ import SwiftData
 struct AddBottleSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Query(sort: \Bottle.name) private var existingBottles: [Bottle]
 
     @State private var name = ""
     @State private var ingredientName = ""
     @State private var category: BottleCategory = .spirit
     @State private var level: Double = 1.0
     @State private var notes = ""
-    @State private var ingredientSearch = ""
     @State private var showIngredientPicker = false
+
+    // New fields
+    @State private var volumeML: Int = 750
+    @State private var abv: Double = 0
+    @State private var purchaseDate: Date = Date()
+    @State private var trackPurchaseDate: Bool = false
+
+    private let commonVolumes = [50, 200, 350, 375, 500, 700, 750, 1000, 1750]
 
     private var isValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
         !ingredientName.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private var duplicateWarning: String? {
+        let trimmed = name.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !trimmed.isEmpty else { return nil }
+        if existingBottles.contains(where: { $0.name.lowercased() == trimmed }) {
+            return "You already have a bottle named \"\(name.trimmingCharacters(in: .whitespaces))\"."
+        }
+        if !ingredientName.isEmpty,
+           existingBottles.contains(where: { $0.ingredientName == ingredientName }) {
+            return "You already have \(ingredientName) in your bar."
+        }
+        return nil
     }
 
     var body: some View {
@@ -26,7 +47,6 @@ struct AddBottleSheet: View {
                     TextField("Brand name (e.g. Maker's Mark)", text: $name)
                         .textInputAutocapitalization(.words)
 
-                    // Ingredient type selector
                     Button {
                         showIngredientPicker = true
                     } label: {
@@ -41,9 +61,15 @@ struct AddBottleSheet: View {
                                 .foregroundStyle(.tertiary)
                         }
                     }
+
+                    if let warning = duplicateWarning {
+                        Label(warning, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
                 }
 
-                // MARK: - Category (auto-detected but editable)
+                // MARK: - Category
                 Section("Category") {
                     Picker("Category", selection: $category) {
                         ForEach(BottleCategory.allCases) { cat in
@@ -52,6 +78,46 @@ struct AddBottleSheet: View {
                         }
                     }
                     .pickerStyle(.menu)
+                }
+
+                // MARK: - Volume & ABV
+                Section {
+                    HStack {
+                        Text("Volume")
+                        Spacer()
+                        Menu {
+                            ForEach(commonVolumes, id: \.self) { vol in
+                                Button {
+                                    volumeML = vol
+                                } label: {
+                                    HStack {
+                                        Text(volumeDisplayString(for: vol))
+                                        if vol == volumeML {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            Text(volumeDisplayString(for: volumeML))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    HStack {
+                        Text("ABV")
+                        Spacer()
+                        TextField("0", value: $abv, format: .number)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 60)
+                        Text("%")
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Details")
+                } footer: {
+                    Text("Optional — helps track your collection.")
                 }
 
                 // MARK: - Level
@@ -73,6 +139,15 @@ struct AddBottleSheet: View {
                     Text("Level")
                 } footer: {
                     Text("How full is the bottle?")
+                }
+
+                // MARK: - Purchase Date
+                Section {
+                    Toggle("Track purchase date", isOn: $trackPurchaseDate)
+
+                    if trackPurchaseDate {
+                        DatePicker("Purchased", selection: $purchaseDate, displayedComponents: .date)
+                    }
                 }
 
                 // MARK: - Notes
@@ -104,13 +179,26 @@ struct AddBottleSheet: View {
         }
     }
 
+    private func volumeDisplayString(for ml: Int) -> String {
+        if ml >= 1000 {
+            let liters = Double(ml) / 1000.0
+            return liters.truncatingRemainder(dividingBy: 1) == 0
+                ? "\(Int(liters))L"
+                : String(format: "%.1fL", liters)
+        }
+        return "\(ml)ml"
+    }
+
     private func addBottle() {
         let bottle = Bottle(
             name: name.trimmingCharacters(in: .whitespaces),
             ingredientName: ingredientName,
             category: category,
             level: level,
-            notes: notes.trimmingCharacters(in: .whitespaces)
+            notes: notes.trimmingCharacters(in: .whitespaces),
+            volumeML: volumeML,
+            abv: abv,
+            purchaseDate: trackPurchaseDate ? purchaseDate : nil
         )
         modelContext.insert(bottle)
         dismiss()
@@ -148,7 +236,6 @@ struct IngredientPickerSheet: View {
         NavigationStack {
             List {
                 if !searchText.isEmpty && filteredIngredients.isEmpty {
-                    // Allow custom ingredient
                     Section {
                         Button {
                             selectedIngredient = searchText
