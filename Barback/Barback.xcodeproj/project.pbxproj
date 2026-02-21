@@ -90,7 +90,7 @@
 				E10006 /* Services */,
 				E10007 /* Theme */,
 			);
-			path = Barback;
+			name = Barback;
 			sourceTree = "<group>";
 		};
 		E10003 /* Models */ = {
