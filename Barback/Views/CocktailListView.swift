@@ -144,7 +144,7 @@ struct CocktailListView: View {
                                         systemImage: "heart.fill"
                                     )
                                 }
-                                .tint(.pink)
+                                .tint(AppTheme.favorite)
                             }
                         }
                     }
@@ -254,7 +254,7 @@ private struct FilterSheet: View {
                             selectedDifficulty = nil
                             selectedGlass = nil
                         }
-                        .foregroundStyle(.red)
+                        .foregroundStyle(AppTheme.statusMissing)
                     }
                 }
             }
@@ -283,7 +283,7 @@ private struct DifficultyPill: View {
                 .padding(.vertical, 8)
                 .background(isSelected ? AppTheme.amber.opacity(0.2) : Color.secondary.opacity(0.1))
                 .foregroundStyle(isSelected ? AppTheme.amber : .secondary)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -308,7 +308,7 @@ private struct GlassPill: View {
             .padding(.vertical, 8)
             .background(isSelected ? AppTheme.amber.opacity(0.2) : Color.secondary.opacity(0.1))
             .foregroundStyle(isSelected ? AppTheme.amber : .secondary)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -337,7 +337,7 @@ struct CocktailRowView: View {
                     if isFavorite {
                         Image(systemName: "heart.fill")
                             .font(.caption2)
-                            .foregroundStyle(.pink)
+                            .foregroundStyle(AppTheme.favorite)
                     }
 
                     if match.cocktail.ibaOfficial {
@@ -346,7 +346,7 @@ struct CocktailRowView: View {
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
                             .background(Color.secondary.opacity(0.2))
-                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius / 2))
                     }
                 }
 
@@ -360,15 +360,15 @@ struct CocktailRowView: View {
 
             if match.canMake {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppTheme.statusReady)
             } else if match.missingCount <= 2 {
                 Text("-\(match.missingCount)")
                     .font(.caption)
                     .fontWeight(.bold)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(AppTheme.deepAmber)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.orange.opacity(0.15))
+                    .background(AppTheme.deepAmber.opacity(0.15))
                     .clipShape(Capsule())
             }
         }

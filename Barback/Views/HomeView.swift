@@ -7,6 +7,7 @@ struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showingAddBottle = false
     @State private var selectedCocktail: Cocktail?
+    @State private var selectedBottle: Bottle?
     @State private var pendingStarterBar: StarterBars.Template?
 
     private var inventory: Set<String> {
@@ -68,55 +69,32 @@ struct HomeView: View {
                     }
                     .padding(.horizontal)
 
-                    // MARK: - Stats
-                    HStack(spacing: 12) {
-                        StatCard(
-                            title: "Bottles",
-                            value: "\(bottles.count)",
-                            icon: "wineglass.fill",
-                            color: .orange
-                        )
-                        StatCard(
-                            title: "Can Make",
-                            value: "\(canMakeMatches.count)",
-                            icon: "checkmark.circle.fill",
-                            color: .green
-                        )
-                        StatCard(
-                            title: "Recipes",
-                            value: "\(CocktailDatabase.count)",
-                            icon: "book.fill",
-                            color: .blue
-                        )
-                    }
-                    .padding(.horizontal)
-
-                    // MARK: - Bar Stats (when user has bottles)
+                    // MARK: - Stats (single row, hidden when bar is empty)
                     if !bottles.isEmpty {
                         HStack(spacing: 12) {
                             StatCard(
-                                title: "Categories",
-                                value: "\(uniqueCategories)",
-                                icon: "square.grid.2x2.fill",
-                                color: .purple
+                                title: "Bottles",
+                                value: "\(bottles.count)",
+                                icon: "wineglass.fill",
+                                color: AppTheme.amber
                             )
                             StatCard(
-                                title: "Made",
-                                value: "\(totalCocktailsMade)",
-                                icon: "checkmark.seal.fill",
-                                color: .pink
+                                title: "Can Make",
+                                value: "\(canMakeMatches.count)",
+                                icon: "checkmark.circle.fill",
+                                color: AppTheme.statusReady
                             )
                             StatCard(
                                 title: "One Away",
                                 value: "\(almostMatches.count)",
                                 icon: "hand.point.up.fill",
-                                color: .orange
+                                color: AppTheme.deepAmber
                             )
                         }
                         .padding(.horizontal)
                     }
 
-                    // MARK: - Tonight's Pick
+                    // MARK: - Tonight's Pick (prominent position)
                     if let pick = tonightsPick {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Tonight's Pick")
@@ -136,15 +114,9 @@ struct HomeView: View {
                     // MARK: - One Away
                     if !almostMatches.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                Text("One Away")
-                                    .font(.headline)
-                                Spacer()
-                                Text("Missing 1 ingredient")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.horizontal)
+                            Text("One Away")
+                                .font(.headline)
+                                .padding(.horizontal)
 
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
@@ -168,24 +140,31 @@ struct HomeView: View {
                                 .padding(.horizontal)
 
                             ForEach(lowBottles) { bottle in
-                                HStack(spacing: 12) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundStyle(.orange)
-                                    VStack(alignment: .leading) {
-                                        Text(bottle.name)
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                        Text(bottle.ingredientName)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                Button {
+                                    selectedBottle = bottle
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundStyle(AppTheme.deepAmber)
+                                        VStack(alignment: .leading) {
+                                            Text(bottle.name)
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundStyle(.primary)
+                                            Text(bottle.ingredientName)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        BottleLevelView(level: bottle.level)
+                                            .frame(width: 60)
                                     }
-                                    Spacer()
-                                    BottleLevelView(level: bottle.level)
-                                        .frame(width: 60)
+                                    .padding(.horizontal)
                                 }
-                                .padding(.horizontal)
+                                .buttonStyle(.plain)
                                 .accessibilityElement(children: .combine)
                                 .accessibilityLabel("\(bottle.name), \(bottle.ingredientName), \(Int(bottle.level * 100)) percent remaining")
+                                .accessibilityHint("Double tap to view bottle details")
                             }
                         }
                     }
@@ -250,6 +229,9 @@ struct HomeView: View {
                 NavigationStack {
                     CocktailDetailView(cocktail: cocktail, inventory: inventory)
                 }
+            }
+            .sheet(item: $selectedBottle) { bottle in
+                BottleDetailSheet(bottle: bottle)
             }
             .confirmationDialog(
                 "Load \(pendingStarterBar?.name ?? "")?",
@@ -319,7 +301,7 @@ private struct OneAwayCard: View {
                 if let missing = match.missingIngredients.first {
                     Text("Need: \(missing)")
                         .font(.caption2)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(AppTheme.deepAmber)
                         .lineLimit(2)
                 }
             }
@@ -327,7 +309,7 @@ private struct OneAwayCard: View {
             .frame(width: 130, alignment: .leading)
             .cardStyle()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ScaleButtonStyle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(match.cocktail.name), need \(match.missingIngredients.first ?? "1 ingredient")")
         .accessibilityHint("Double tap to view recipe")
@@ -367,7 +349,7 @@ private struct StarterBarCard: View {
             .padding(14)
             .cardStyle()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ScaleButtonStyle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(template.name), \(template.subtitle)")
         .accessibilityHint("Double tap to load this starter bar")

@@ -79,7 +79,7 @@ struct BottleDetailSheet: View {
                                     bottle.volumeML = vol
                                 } label: {
                                     HStack {
-                                        Text(volumeDisplayString(for: vol))
+                                        Text(Bottle.volumeDisplay(for: vol))
                                         if vol == bottle.volumeML {
                                             Image(systemName: "checkmark")
                                         }
@@ -156,7 +156,7 @@ struct BottleDetailSheet: View {
                             bottle.isFavorite.toggle()
                         } label: {
                             Image(systemName: bottle.isFavorite ? "star.fill" : "star")
-                                .foregroundStyle(bottle.isFavorite ? .yellow : .gray)
+                                .foregroundStyle(bottle.isFavorite ? AppTheme.amber : .secondary)
                         }
                     }
                 }
@@ -209,15 +209,6 @@ struct BottleDetailSheet: View {
         }
     }
 
-    private func volumeDisplayString(for ml: Int) -> String {
-        if ml >= 1000 {
-            let liters = Double(ml) / 1000.0
-            return liters.truncatingRemainder(dividingBy: 1) == 0
-                ? "\(Int(liters))L"
-                : String(format: "%.1fL", liters)
-        }
-        return "\(ml)ml"
-    }
 }
 
 // MARK: - Quick Level Button
@@ -244,7 +235,7 @@ private struct QuickLevelButton: View {
                 .padding(.vertical, 8)
                 .background(isSelected ? AppTheme.levelColor(for: level).opacity(0.2) : Color.secondary.opacity(0.1))
                 .foregroundStyle(isSelected ? AppTheme.levelColor(for: level) : .secondary)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(label) level")

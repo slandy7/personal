@@ -65,12 +65,9 @@ struct AddBottleSheet: View {
                     if let warning = duplicateWarning {
                         Label(warning, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(AppTheme.deepAmber)
                     }
-                }
 
-                // MARK: - Category
-                Section("Category") {
                     Picker("Category", selection: $category) {
                         ForEach(BottleCategory.allCases) { cat in
                             Label(cat.rawValue, systemImage: cat.icon)
@@ -91,7 +88,7 @@ struct AddBottleSheet: View {
                                     volumeML = vol
                                 } label: {
                                     HStack {
-                                        Text(volumeDisplayString(for: vol))
+                                        Text(Bottle.volumeDisplay(for: vol))
                                         if vol == volumeML {
                                             Image(systemName: "checkmark")
                                         }
@@ -99,7 +96,7 @@ struct AddBottleSheet: View {
                                 }
                             }
                         } label: {
-                            Text(volumeDisplayString(for: volumeML))
+                            Text(Bottle.volumeDisplay(for: volumeML))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -177,16 +174,6 @@ struct AddBottleSheet: View {
                 )
             }
         }
-    }
-
-    private func volumeDisplayString(for ml: Int) -> String {
-        if ml >= 1000 {
-            let liters = Double(ml) / 1000.0
-            return liters.truncatingRemainder(dividingBy: 1) == 0
-                ? "\(Int(liters))L"
-                : String(format: "%.1fL", liters)
-        }
-        return "\(ml)ml"
     }
 
     private func addBottle() {

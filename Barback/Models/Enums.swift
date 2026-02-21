@@ -32,15 +32,15 @@ enum BottleCategory: String, Codable, CaseIterable, Identifiable {
 
     var color: Color {
         switch self {
-        case .spirit: return .orange
-        case .liqueur: return .purple
-        case .vermouthWine: return .red
-        case .syrup: return .brown
-        case .juice: return .green
-        case .mixer: return .cyan
-        case .bitter: return .mint
-        case .garnish: return .teal
-        case .other: return .gray
+        case .spirit: return Color(red: 0.80, green: 0.52, blue: 0.20)    // warm amber-orange
+        case .liqueur: return Color(red: 0.58, green: 0.27, blue: 0.42)   // warm plum
+        case .vermouthWine: return Color(red: 0.68, green: 0.22, blue: 0.26) // wine red
+        case .syrup: return Color(red: 0.76, green: 0.58, blue: 0.28)     // honey
+        case .juice: return Color(red: 0.40, green: 0.56, blue: 0.32)     // sage green
+        case .mixer: return Color(red: 0.30, green: 0.52, blue: 0.52)     // warm teal
+        case .bitter: return Color(red: 0.70, green: 0.38, blue: 0.28)    // terra cotta
+        case .garnish: return Color(red: 0.48, green: 0.54, blue: 0.30)   // olive green
+        case .other: return Color(red: 0.52, green: 0.48, blue: 0.44)     // warm gray
         }
     }
 }
@@ -72,13 +72,13 @@ enum CocktailCategory: String, Codable, CaseIterable, Identifiable {
 
     var color: Color {
         switch self {
-        case .whiskey: return .orange
-        case .gin: return .green
-        case .rum: return .brown
-        case .tequila: return .yellow
-        case .vodka: return .blue
-        case .brandy: return .purple
-        case .other: return .gray
+        case .whiskey: return Color(red: 0.75, green: 0.48, blue: 0.18)   // rich amber
+        case .gin: return Color(red: 0.35, green: 0.55, blue: 0.40)       // botanical green
+        case .rum: return Color(red: 0.65, green: 0.40, blue: 0.22)       // warm copper
+        case .tequila: return Color(red: 0.72, green: 0.60, blue: 0.20)   // warm gold
+        case .vodka: return Color(red: 0.42, green: 0.48, blue: 0.55)     // cool slate
+        case .brandy: return Color(red: 0.55, green: 0.25, blue: 0.30)    // burgundy
+        case .other: return Color(red: 0.52, green: 0.48, blue: 0.44)     // warm gray
         }
     }
 }

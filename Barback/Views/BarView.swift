@@ -131,7 +131,7 @@ struct BarView: View {
                                                     systemImage: bottle.isFavorite ? "star.slash" : "star.fill"
                                                 )
                                             }
-                                            .tint(.yellow)
+                                            .tint(AppTheme.amber)
                                         }
                                 }
                             } header: {
@@ -173,6 +173,7 @@ struct BarView: View {
             .sheet(item: $selectedBottle) { bottle in
                 BottleDetailSheet(bottle: bottle)
             }
+            .sensoryFeedback(.warning, trigger: bottleToDelete) { _, newValue in newValue != nil }
             .confirmationDialog(
                 "Delete \(bottleToDelete?.name ?? "")?",
                 isPresented: Binding(
@@ -204,7 +205,7 @@ struct BottleRowView: View {
             // Category color dot
             Circle()
                 .fill(bottle.category.color)
-                .frame(width: 8, height: 8)
+                .frame(width: 10, height: 10)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
@@ -215,7 +216,7 @@ struct BottleRowView: View {
                     if bottle.isFavorite {
                         Image(systemName: "star.fill")
                             .font(.caption2)
-                            .foregroundStyle(.yellow)
+                            .foregroundStyle(AppTheme.amber)
                     }
                 }
 

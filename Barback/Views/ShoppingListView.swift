@@ -95,7 +95,7 @@ struct ShoppingListView: View {
                                                 .font(.subheadline)
                                             Text("Unlocks \(suggestion.unlocksCount) cocktail\(suggestion.unlocksCount == 1 ? "" : "s")")
                                                 .font(.caption)
-                                                .foregroundStyle(.green)
+                                                .foregroundStyle(AppTheme.statusReady)
                                         }
 
                                         Spacer()
@@ -217,7 +217,7 @@ struct ShoppingListView: View {
                                         clearCompleted()
                                     }
                                     .font(.caption)
-                                    .foregroundStyle(.red)
+                                    .foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -275,7 +275,7 @@ struct ShoppingListView: View {
                 Text("This will remove all \(items.count) items.")
             }
             .onAppear {
-                showSuggestions = pendingItems.isEmpty
+                showSuggestions = true
             }
         }
     }
@@ -341,7 +341,7 @@ private struct ShoppingItemRow: View {
         HStack(spacing: 12) {
             Button(action: toggleAction) {
                 Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(item.isCompleted ? .green : .secondary)
+                    .foregroundStyle(item.isCompleted ? AppTheme.statusReady : .secondary)
                     .font(.title3)
             }
             .buttonStyle(.plain)
@@ -368,14 +368,15 @@ private struct ShoppingItemRow: View {
                             item.quantity = max(1, item.quantity - 1)
                         } label: {
                             Image(systemName: "minus.circle")
-                                .font(.caption)
+                                .font(.body)
                                 .foregroundStyle(.secondary)
+                                .frame(minWidth: 36, minHeight: 36)
                         }
                         .buttonStyle(.plain)
                     }
 
                     Text("×\(item.quantity)")
-                        .font(.caption)
+                        .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(item.quantity > 1 ? AppTheme.amber : .secondary)
                         .frame(minWidth: 24)
@@ -384,8 +385,9 @@ private struct ShoppingItemRow: View {
                         item.quantity += 1
                     } label: {
                         Image(systemName: "plus.circle")
-                            .font(.caption)
+                            .font(.body)
                             .foregroundStyle(.secondary)
+                            .frame(minWidth: 36, minHeight: 36)
                     }
                     .buttonStyle(.plain)
                 }

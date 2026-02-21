@@ -20,6 +20,7 @@ struct BottleLevelView: View {
                         RoundedRectangle(cornerRadius: height / 2)
                             .fill(color)
                             .frame(width: max(geo.size.width * level, height))
+                            .animation(.easeInOut(duration: 0.3), value: level)
                     }
                 }
             }

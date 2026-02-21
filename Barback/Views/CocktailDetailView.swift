@@ -39,31 +39,20 @@ struct CocktailDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 28) {
                 headerSection
-
-                Divider().padding(.horizontal)
-
-                scalePicker
-
-                Divider().padding(.horizontal)
 
                 ingredientsSection
 
-                Divider().padding(.horizontal)
+                scalePicker
 
                 instructionsSection
 
                 if !match.missingIngredients.isEmpty {
-                    Divider().padding(.horizontal)
                     addToShoppingSection
                 }
 
-                Divider().padding(.horizontal)
-
                 madeItSection
-
-                Divider().padding(.horizontal)
 
                 aboutSection
 
@@ -84,13 +73,16 @@ struct CocktailDetailView: View {
                     withAnimation { favorites.toggle(cocktail.id) }
                 } label: {
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .foregroundStyle(isFavorite ? .pink : .secondary)
+                        .foregroundStyle(isFavorite ? AppTheme.favorite : .secondary)
+                        .symbolEffect(.bounce, value: isFavorite)
                 }
             }
         }
         .sheet(isPresented: $showMadeItSheet) {
             MadeItSheet(cocktailId: cocktail.id)
         }
+        .sensoryFeedback(.selection, trigger: scale)
+        .sensoryFeedback(.success, trigger: addedToShoppingList)
     }
 
     // MARK: - Header
@@ -126,10 +118,10 @@ struct CocktailDetailView: View {
                 Label("You can make this!", systemImage: "checkmark.circle.fill")
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(AppTheme.statusReady)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .background(Color.green.opacity(0.1))
+                    .background(AppTheme.statusReady.opacity(0.1))
                     .clipShape(Capsule())
             } else {
                 Label(
@@ -138,10 +130,10 @@ struct CocktailDetailView: View {
                 )
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundStyle(.orange)
+                .foregroundStyle(AppTheme.statusMissing)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(Color.orange.opacity(0.1))
+                .background(AppTheme.statusMissing.opacity(0.1))
                 .clipShape(Capsule())
             }
         }
@@ -169,7 +161,7 @@ struct CocktailDetailView: View {
                             .padding(.vertical, 10)
                             .background(scale == value ? cocktail.category.color.opacity(0.2) : Color.secondary.opacity(0.08))
                             .foregroundStyle(scale == value ? cocktail.category.color : .secondary)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .clipShape(RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(value == 0.5 ? "Half serving" : "\(Int(value)) serving\(value > 1 ? "s" : "")")
@@ -200,7 +192,7 @@ struct CocktailDetailView: View {
                             if isAvailable {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.caption)
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(AppTheme.statusReady)
                             } else if originalIngredient.isOptional {
                                 Image(systemName: "circle.dashed")
                                     .font(.caption)
@@ -208,7 +200,7 @@ struct CocktailDetailView: View {
                             } else {
                                 Image(systemName: "xmark.circle.fill")
                                     .font(.caption)
-                                    .foregroundStyle(.red)
+                                    .foregroundStyle(AppTheme.statusMissing)
                             }
 
                             Text(ingredient.amount)
@@ -219,7 +211,7 @@ struct CocktailDetailView: View {
 
                             Text(originalIngredient.name)
                                 .font(.subheadline)
-                                .foregroundStyle(isMissing ? .red : .primary)
+                                .foregroundStyle(isMissing ? AppTheme.statusMissing : .primary)
 
                             if originalIngredient.isOptional {
                                 Text("optional")
@@ -240,7 +232,7 @@ struct CocktailDetailView: View {
                             if !owned.isEmpty {
                                 Text("You have: \(owned.joined(separator: ", "))")
                                     .font(.caption2)
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(AppTheme.statusReady)
                                     .padding(.leading, 100)
                             } else {
                                 Text("Sub: \(substitutes.prefix(3).joined(separator: ", "))")
@@ -293,7 +285,7 @@ struct CocktailDetailView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "leaf.fill")
                         .font(.caption)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(AppTheme.statusReady)
                         .frame(width: 22)
 
                     Text("Garnish: \(cocktail.garnish)")
@@ -318,7 +310,7 @@ struct CocktailDetailView: View {
                 ForEach(match.missingIngredients, id: \.self) { ingredient in
                     HStack {
                         Image(systemName: "cart.badge.plus")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(AppTheme.deepAmber)
                         Text(ingredient)
                             .font(.subheadline)
                         Spacer()
@@ -339,7 +331,7 @@ struct CocktailDetailView: View {
                 .fontWeight(.semibold)
             }
             .buttonStyle(.borderedProminent)
-            .tint(addedToShoppingList ? .green : .orange)
+            .tint(addedToShoppingList ? AppTheme.statusReady : AppTheme.deepAmber)
             .disabled(addedToShoppingList)
             .padding(.horizontal)
         }
@@ -349,34 +341,36 @@ struct CocktailDetailView: View {
 
     private var madeItSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Your History")
-                .font(.headline)
-                .padding(.horizontal)
+            if timesMade > 0 {
+                Text("Your History")
+                    .font(.headline)
+                    .padding(.horizontal)
 
-            HStack(spacing: 16) {
-                VStack {
-                    Text("\(timesMade)")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text("Times made")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-
-                if let date = lastMade {
+                HStack(spacing: 16) {
                     VStack {
-                        Text(date, format: .dateTime.month(.abbreviated).day())
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        Text("Last made")
+                        Text("\(timesMade)")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        Text("Times made")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
+
+                    if let date = lastMade {
+                        VStack {
+                            Text(date, format: .dateTime.month(.abbreviated).day())
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            Text("Last made")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
 
             Button {
                 showMadeItSheet = true
@@ -441,7 +435,7 @@ private struct MadeItSheet: View {
                             } label: {
                                 Image(systemName: star <= rating ? "star.fill" : "star")
                                     .font(.title2)
-                                    .foregroundStyle(star <= rating ? .yellow : .secondary)
+                                    .foregroundStyle(star <= rating ? AppTheme.amber : .secondary)
                             }
                             .buttonStyle(.plain)
                         }

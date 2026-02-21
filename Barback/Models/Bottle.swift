@@ -43,6 +43,16 @@ final class Bottle {
         return "\(volumeML)ml"
     }
 
+    static func volumeDisplay(for ml: Int) -> String {
+        if ml >= 1000 {
+            let liters = Double(ml) / 1000.0
+            return liters.truncatingRemainder(dividingBy: 1) == 0
+                ? "\(Int(liters))L"
+                : String(format: "%.1fL", liters)
+        }
+        return "\(ml)ml"
+    }
+
     var abvDisplayString: String? {
         guard abv > 0 else { return nil }
         return abv.truncatingRemainder(dividingBy: 1) == 0

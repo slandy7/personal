@@ -7,14 +7,16 @@ struct StatCard: View {
     let color: Color
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.title2)
+                .font(.title3)
                 .foregroundStyle(color)
 
             Text(value)
-                .font(.system(.title, design: .rounded, weight: .bold))
+                .font(.title2)
+                .fontWeight(.bold)
                 .foregroundStyle(.primary)
+                .contentTransition(.numericText())
 
             Text(title)
                 .font(.caption)
@@ -22,7 +24,8 @@ struct StatCard: View {
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 8)
         .cardStyle()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title): \(value)")
@@ -43,7 +46,7 @@ struct LargeFeatureCard: View {
                             Label("Ready to make", systemImage: "checkmark.circle.fill")
                                 .font(.caption)
                                 .fontWeight(.medium)
-                                .foregroundStyle(.green)
+                                .foregroundStyle(AppTheme.statusReady)
                         }
 
                         Text(cocktail.name)
@@ -63,11 +66,6 @@ struct LargeFeatureCard: View {
                         .foregroundStyle(cocktail.category.color.opacity(0.7))
                 }
 
-                Text(cocktail.description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-
                 // Ingredient pills
                 FlowLayout(spacing: 6) {
                     ForEach(cocktail.ingredients) { ingredient in
@@ -81,11 +79,16 @@ struct LargeFeatureCard: View {
                             .clipShape(Capsule())
                     }
                 }
+
+                Text(cocktail.description)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
             .padding(16)
             .cardStyle()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ScaleButtonStyle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(cocktail.name), \(canMake ? "ready to make" : ""), \(cocktail.glass.rawValue)")
         .accessibilityHint("Double tap to view recipe")
@@ -142,9 +145,9 @@ struct FlowLayout: Layout {
 #Preview {
     VStack {
         HStack {
-            StatCard(title: "Bottles", value: "12", icon: "wineglass.fill", color: .orange)
-            StatCard(title: "Can Make", value: "8", icon: "checkmark.circle.fill", color: .green)
-            StatCard(title: "Recipes", value: "64", icon: "book.fill", color: .blue)
+            StatCard(title: "Bottles", value: "12", icon: "wineglass.fill", color: AppTheme.amber)
+            StatCard(title: "Can Make", value: "8", icon: "checkmark.circle.fill", color: AppTheme.statusReady)
+            StatCard(title: "One Away", value: "5", icon: "hand.point.up.fill", color: AppTheme.deepAmber)
         }
         .padding()
     }
